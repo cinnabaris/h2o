@@ -1,3 +1,4 @@
 [package]
 name = "h2o-cache"
 version = "0.0.1"
+authors = ["Jeremy Zheng <jitang.zheng@gmail.com>"]
