@@ -1,2 +1,3 @@
-# h2o
+# H2O
+
 A flexible web framework for rust.

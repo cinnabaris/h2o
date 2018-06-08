@@ -1,0 +1,8 @@
+[workspace]
+members = [
+  "lib",
+  "middlewares/cookie",
+  "middlewares/cache",
+  "middlewares/orm",
+  "middlewares/jwt"
+]
