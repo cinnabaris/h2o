@@ -7,6 +7,6 @@ authors = ["Jeremy Zheng <jitang.zheng@gmail.com>"]
 hyper = "0.12"
 mime = "0.3"
 tokio = "0.1"
-tokio-core = "0.1"
 futures = "0.1"
+regex = "1.0"
 log = "0.4.2"

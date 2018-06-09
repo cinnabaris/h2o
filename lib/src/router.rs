@@ -1,84 +1,94 @@
-use std::net::SocketAddr;
+use std::fmt;
+use std::time::SystemTime;
 
-use futures::future;
-use hyper::{self, rt::Future, service::service_fn, Body, Request, Response, Server, StatusCode};
+use hyper::{self, Body, Method, Request, StatusCode};
+use regex::{Captures, Regex};
 
-use super::route::Route;
+use super::{context::Context, response::Response, result::Result, session::Session};
 
-type BoxFut = Box<Future<Item = Response<Body>, Error = hyper::Error> + Send>;
+pub type Handler = Fn(&Context, &Session) -> Result<Response> + Sync + Send;
+
+pub struct Route {
+    method: Method,
+    pattern: Regex,
+    handler: Box<Handler>,
+}
+
+impl Route {
+    pub fn new(m: Method, p: &str, h: Box<Handler>) -> Result<Self> {
+        Ok(Self {
+            method: m,
+            pattern: Regex::new(p)?,
+            handler: h,
+        })
+    }
+
+    pub fn parse<'a>(&self, method: &'a Method, path: &'a str) -> Option<Captures<'a>> {
+        if method == &self.method {
+            if let Some(cap) = self.pattern.captures(path) {
+                return Some(cap);
+            }
+        }
+        None
+    }
+
+    pub fn walk<F>(&self, f: F) -> bool
+    where
+        F: Fn(&Method, &Regex) -> bool,
+    {
+        f(&self.method, &self.pattern)
+    }
+}
 
 pub struct Router {
     routes: Vec<Route>,
+    context: Context,
 }
 
 impl Router {
     pub fn new() -> Self {
-        Self { routes: Vec::new() }
+        Self {
+            routes: Vec::new(),
+            context: Context::new(),
+        }
     }
-    // pub fn get<S: Into<String>>(&mut self, pattern: S) {
-    //     self.add(Method::GET, pattern)
-    // }
-    // pub fn add<S: Into<String>>(&mut self, method: Method, pattern: S) {
-    //     self.routes.push(Route::new(method, pattern.into()))
-    // }
-    pub fn walk() {}
-    // fn handler<F>(&self) -> (Fn(Request<Body>) -> BoxFut) {
-    //     let routes = Arc::clone(&self.routes);
-    //     let routes = routes.lock().unwrap();
-    //     |req: Request<Body>| -> BoxFut {
-    //         let mut response = Response::new(Body::empty());
-    //         let mut ok = false;
-    //         for rt in routes.iter() {
-    //             if rt.is_match(req.method(), req.uri().path()) {
-    //                 *response.body_mut() = Body::from("matched");
-    //                 ok = true;
-    //             }
-    //         }
-    //         if !ok {
-    //             *response.status_mut() = StatusCode::NOT_FOUND;
-    //         }
-    //
-    //         Box::new(future::ok(response))
-    //     }
-    // }
+    pub fn get(&mut self, p: &str, h: Box<Handler>) -> Result<()> {
+        self.add(Method::GET, p, h)
+    }
+    pub fn add(&mut self, m: Method, p: &str, h: Box<Handler>) -> Result<()> {
+        self.routes.push(Route::new(m, p, h)?);
+        Ok(())
+    }
 
-    // pub fn run(self, addr: &SocketAddr) {
-    //     let server = Server::bind(addr).serve(move || self.handler());
-    //     info!("Listening on http://{}", addr);
-    //     hyper::rt::run(server.map_err(|e| error!("server error: {}", e)));
-    // }
+    pub fn handle(&self, req: Request<Body>) -> hyper::Response<Body> {
+        let begin = SystemTime::now();
+        let res = Response::to(self.walk(req));
+        if let Ok(dur) = begin.elapsed() {
+            info!("{} {:?}", res.status(), dur);
+        };
+        res
+    }
+
+    fn walk(&self, req: Request<Body>) -> Result<Response> {
+        let method = req.method();
+        let uri = req.uri();
+        info!("{:?} {} {}", req.version(), method, uri);
+        for it in self.routes.iter() {
+            if let Some(_) = it.parse(method, uri.path()) {
+                return (it.handler)(&self.context, &Session::new());
+            }
+        }
+
+        Ok(Response::new(StatusCode::NOT_FOUND, None))
+    }
 }
 
-//-----------------------------------------------------------------------------
-pub fn run(addr: &'static SocketAddr, router: &'static Router) {
-    let service = move || {
-        service_fn(move |req: Request<Body>| -> BoxFut {
-            let mut response = Response::new(Body::empty());
-            let mut ok = false;
-
-            for rt in router.routes.iter() {
-                if rt.is_match(req.method(), req.uri().path()) {
-                    *response.body_mut() = Body::from("matched");
-                    ok = true;
-                }
-            }
-
-            if !ok {
-                *response.status_mut() = StatusCode::NOT_FOUND;
-            }
-
-            Box::new(future::ok(response))
-        })
-    };
-    hyper::rt::run(hyper::rt::lazy(move || {
-        let server = Server::try_bind(addr)
-            .unwrap()
-            .serve(service)
-            .map_err(|e| error!("server error: {}", e));
-        info!("Listening on http://{}", addr);
-        hyper::rt::spawn(server);
-
+impl fmt::Debug for Router {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        println!("{:8} {}", "METHOD", "PATH");
+        for it in self.routes.iter() {
+            write!(f, "{:8} {}", it.method, it.pattern)?;
+        }
         Ok(())
-    }));
-    // hyper::rt::run(server.map_err(|e| error!("server error: {}", e)));
+    }
 }

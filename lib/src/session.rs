@@ -1,6 +1,6 @@
-pub struct Context {}
+pub struct Session {}
 
-impl Context {
+impl Session {
     pub fn new() -> Self {
         Self {}
     }

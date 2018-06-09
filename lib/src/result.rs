@@ -1,6 +1,8 @@
 use std::error::Error as StdError;
 use std::{env, error, fmt, io, num, path, result, string, time};
 
+use regex;
+
 pub type Result<T> = result::Result<T, Error>;
 
 #[derive(Debug)]
@@ -12,6 +14,7 @@ pub enum Error {
     PathStripPrefixError(path::StripPrefixError),
     StringFromUtf8(string::FromUtf8Error),
     SystemTime(time::SystemTimeError),
+    Regex(regex::Error),
     WithDescription(String),
 }
 
@@ -24,6 +27,7 @@ impl fmt::Display for Error {
             Error::PathStripPrefixError(ref err) => err.fmt(f),
             Error::StringFromUtf8(ref err) => err.fmt(f),
             Error::SystemTime(ref err) => err.fmt(f),
+            Error::Regex(ref err) => err.fmt(f),
             Error::WithDescription(ref desc) => write!(f, "{}", desc),
         }
     }
@@ -38,6 +42,7 @@ impl StdError for Error {
             Error::PathStripPrefixError(ref err) => err.description(),
             Error::StringFromUtf8(ref err) => err.description(),
             Error::SystemTime(ref err) => err.description(),
+            Error::Regex(ref err) => err.description(),
             Error::WithDescription(ref desc) => &desc,
         }
     }
@@ -49,7 +54,14 @@ impl StdError for Error {
             Error::PathStripPrefixError(ref err) => Some(err),
             Error::StringFromUtf8(ref err) => Some(err),
             Error::SystemTime(ref err) => Some(err),
+            Error::Regex(ref err) => Some(err),
             Error::WithDescription(_) => None,
         }
+    }
+}
+
+impl From<regex::Error> for Error {
+    fn from(err: regex::Error) -> Error {
+        Error::Regex(err)
     }
 }

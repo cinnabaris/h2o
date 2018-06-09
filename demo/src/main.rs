@@ -12,5 +12,5 @@ lazy_static! {
 
 fn main() {
     env_logger::init();
-    h2o::router::run(&ADDRESS, &ROUTER);
+    h2o::app::run(&ADDRESS, &ROUTER);
 }
