@@ -2,3 +2,11 @@
 name = "h2o"
 version = "0.0.1"
 authors = ["Jeremy Zheng <jitang.zheng@gmail.com>"]
+
+[dependencies]
+hyper = "0.12"
+mime = "0.3"
+tokio = "0.1"
+tokio-core = "0.1"
+futures = "0.1"
+log = "0.4.2"

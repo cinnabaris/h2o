@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "lib",
+  "demo",
   "middlewares/cookie",
   "middlewares/cache",
   "middlewares/orm",

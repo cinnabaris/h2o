@@ -1,9 +1,13 @@
 [package]
-name = "h2o-demo"
+name = "demo"
 version = "0.0.1"
 authors = ["Jeremy Zheng <jitang.zheng@gmail.com>"]
 
 [dependencies]
-hyper = "0.12"
-mime = "0.3"
-tokio = "0.1"
+env_logger = "0.5"
+lazy_static = "1.0"
+h2o = { path = "../lib" }
+h2o_cache = { path = "../middlewares/cache"}
+h2o_cookie = { path = "../middlewares/cookie"}
+h2o_jwt = { path = "../middlewares/jwt"}
+h2o_orm = { path = "../middlewares/orm"}
